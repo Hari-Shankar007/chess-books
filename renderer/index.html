@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chess Book Library</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  if (typeof pdfjsLib !== 'undefined') {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+</script>
+</head>
+<body>
+<div class="app-layout" id="appLayout">
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div style="display:flex;align-items:center;gap:12px">
+      <button class="btn-icon" id="sidebarToggle"><i data-lucide="menu" width="20" height="20"></i></button>
+      <div class="logo">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <rect x="2" y="6" width="18" height="22" rx="2" fill="#01696f" opacity="0.15"/>
+          <rect x="4" y="4" width="18" height="22" rx="2" fill="#01696f" opacity="0.3"/>
+          <rect x="6" y="2" width="18" height="22" rx="2" fill="#01696f" opacity="0.6"/>
+          <path d="M16 9v2M13 9h6M13 11l1 5h4l1-5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M11 16h10M14 19h4" stroke="white" stroke-width="1.2" stroke-linecap="round"/>
+          <rect x="13" y="19" width="6" height="3" rx="1" fill="white" opacity="0.9"/>
+        </svg>
+        <span class="logo-text">ChessLibrary</span>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn-icon" data-theme-toggle title="Toggle theme"><i data-lucide="moon" width="18" height="18"></i></button>
+      <button class="btn-primary" id="addBookBtn"><i data-lucide="plus" width="16" height="16"></i> Add Book</button>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Library</div>
+      <button class="sidebar-nav-item active" data-filter="all"><i data-lucide="library" width="16" height="16"></i>All Books<span class="nav-badge" id="badge-all">0</span></button>
+      <button class="sidebar-nav-item" data-filter="recent"><i data-lucide="clock" width="16" height="16"></i>Recently Added</button>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Level</div>
+      <button class="sidebar-nav-item" data-filter="beginner"><i data-lucide="sprout" width="16" height="16"></i>Beginner<span class="nav-badge" id="badge-beginner">0</span></button>
+      <button class="sidebar-nav-item" data-filter="intermediate"><i data-lucide="zap" width="16" height="16"></i>Intermediate<span class="nav-badge" id="badge-intermediate">0</span></button>
+      <button class="sidebar-nav-item" data-filter="advanced"><i data-lucide="flame" width="16" height="16"></i>Advanced<span class="nav-badge" id="badge-advanced">0</span></button>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Phase</div>
+      <button class="sidebar-nav-item" data-filter="opening"><i data-lucide="arrow-right-circle" width="16" height="16"></i>Opening<span class="nav-badge" id="badge-opening">0</span></button>
+      <button class="sidebar-nav-item" data-filter="middlegame"><i data-lucide="swords" width="16" height="16"></i>Middlegame<span class="nav-badge" id="badge-middlegame">0</span></button>
+      <button class="sidebar-nav-item" data-filter="endgame"><i data-lucide="flag" width="16" height="16"></i>Endgame<span class="nav-badge" id="badge-endgame">0</span></button>
+      <button class="sidebar-nav-item" data-filter="general"><i data-lucide="layers" width="16" height="16"></i>General<span class="nav-badge" id="badge-general">0</span></button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main-content">
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-value" id="stat-total">0</div><div class="stat-label">Total Books</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-beginner">0</div><div class="stat-label">Beginner</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-intermediate">0</div><div class="stat-label">Intermediate</div></div>
+      <div class="stat-card"><div class="stat-value" id="stat-advanced">0</div><div class="stat-label">Advanced</div></div>
+    </div>
+    <div class="search-row">
+      <div class="search-bar">
+        <i data-lucide="search" width="16" height="16"></i>
+        <input type="text" id="searchInput" placeholder="Search books...">
+        <button class="btn-icon" id="clearSearch" style="display:none"><i data-lucide="x" width="14" height="14"></i></button>
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">FILTER:</span>
+        <button class="filter-pill pill-beginner" data-quick="beginner">🌱 Beginner</button>
+        <button class="filter-pill pill-intermediate" data-quick="intermediate">⚡ Intermediate</button>
+        <button class="filter-pill pill-advanced" data-quick="advanced">🔥 Advanced</button>
+        <button class="filter-pill pill-opening" data-quick="opening">♟ Opening</button>
+        <button class="filter-pill pill-middlegame" data-quick="middlegame">⚔ Middlegame</button>
+        <button class="filter-pill pill-endgame" data-quick="endgame">🏁 Endgame</button>
+      </div>
+    </div>
+    <div class="section-header">
+      <div>
+        <h1 class="section-title" id="sectionTitle">All Books</h1>
+        <p class="section-count" id="sectionCount">0 books</p>
+      </div>
+    </div>
+    <div class="books-grid" id="booksGrid"></div>
+  </main>
+</div>
+
+<!-- ADD/EDIT MODAL -->
+<div class="modal-overlay" id="addBookModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title" id="modalTitleText">Add Chess Book</h2>
+      <button class="btn-icon" id="closeModal"><i data-lucide="x" width="20" height="20"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editBookId">
+      <div class="form-group">
+        <label class="form-label">PDF File <span style="color:#d163a7">*</span></label>
+        <div class="upload-zone" id="uploadZone">
+          <div class="upload-zone-icon"><i data-lucide="file-up" width="36" height="36"></i></div>
+          <p><strong>Click to choose PDF</strong> from your computer</p>
+          <p id="uploadStatus" style="font-size:12px;margin-top:4px;color:#6daa45"></p>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Book Title <span style="color:#d163a7">*</span></label>
+        <input type="text" id="bookTitle" class="form-input" placeholder="e.g. My System">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Author</label>
+        <input type="text" id="bookAuthor" class="form-input" placeholder="e.g. Aaron Nimzowitsch">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Level</label>
+        <div class="tag-selector" id="levelSelector">
+          <label class="tag-option" data-tag="beginner">🌱 Beginner</label>
+          <label class="tag-option" data-tag="intermediate">⚡ Intermediate</label>
+          <label class="tag-option" data-tag="advanced">🔥 Advanced</label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Game Phase</label>
+        <div class="tag-selector" id="phaseSelector">
+          <label class="tag-option" data-tag="opening">♟ Opening</label>
+          <label class="tag-option" data-tag="middlegame">⚔ Middlegame</label>
+          <label class="tag-option" data-tag="endgame">🏁 Endgame</label>
+          <label class="tag-option" data-tag="general">📚 General</label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <textarea id="bookNotes" class="form-input" rows="3" placeholder="Personal notes, progress..."></textarea>
+      </div>
+      <p id="formError" style="color:#d163a7;font-size:12px;display:none"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" id="cancelModal">Cancel</button>
+      <button class="btn-primary" id="saveBookBtn"><i data-lucide="save" width="16" height="16"></i> Save Book</button>
+    </div>
+  </div>
+</div>
+
+<!-- NOTES MODAL -->
+<div class="modal-overlay" id="notesModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title" id="notesModalTitle">Notes</h2>
+      <button class="btn-icon" id="closeNotesModal"><i data-lucide="x" width="20" height="20"></i></button>
+    </div>
+    <div class="modal-body">
+      <textarea id="notesEditArea" class="form-input" rows="12" style="width:100%"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" id="cancelNotesModal">Cancel</button>
+      <button class="btn-primary" id="saveNotesBtn"><i data-lucide="save" width="16" height="16"></i> Save Notes</button>
+    </div>
+  </div>
+</div>
+
+<!-- PDF VIEWER -->
+<div class="pdf-viewer-overlay" id="pdfViewer">
+  <div class="pdf-viewer-header">
+    <span class="pdf-viewer-title" id="pdfViewerTitle">PDF Viewer</span>
+    <div class="pdf-viewer-actions">
+      <button class="btn-secondary" id="downloadPdfBtn"><i data-lucide="download" width="14" height="14"></i> Download</button>
+      <button class="btn-secondary" id="openExternalBtn"><i data-lucide="external-link" width="14" height="14"></i> Open External</button>
+      <button class="btn-icon" id="closePdfViewer"><i data-lucide="x" width="20" height="20"></i></button>
+    </div>
+  </div>
+  <div class="pdf-frame-wrap">
+    <iframe class="pdf-frame" id="pdfFrame" title="PDF Viewer"></iframe>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="renderer.js"></script>
+</body>
+</html>
