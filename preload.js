@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('chessApi', {
 
   // PDF operations
   choosePdf: (bookId) => ipcRenderer.invoke('pdf:choose', bookId),
+    choosePdfBulk: () => ipcRenderer.invoke('pdf:chooseBulk'),
   getPdfBase64: (filePath) => ipcRenderer.invoke('pdf:getBase64', filePath),
   openPdfExternal: (filePath) => ipcRenderer.invoke('pdf:openExternal', filePath),
 
