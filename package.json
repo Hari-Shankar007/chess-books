@@ -22,8 +22,7 @@
     "files": [
       "main.js",
       "preload.js",
-      "renderer/**",
-    ]
+      "renderer/**"    ]
           "directories": {
         "buildResources": "build",
         "output": "dist"
