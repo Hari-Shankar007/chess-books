@@ -6,13 +6,26 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
 
     strategy:
+      fail-fast: false
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
+        include:
+          - os: windows-latest
+            artifact_name: Chess-Book-Library-Setup.exe
+            asset_path: dist/*.exe
+          - os: macos-latest
+            artifact_name: Chess-Book-Library.dmg
+            asset_path: dist/*.dmg
+          - os: ubuntu-latest
+            artifact_name: Chess-Book-Library.AppImage
+            asset_path: dist/*.AppImage
 
     steps:
       - name: Checkout code
@@ -26,7 +39,57 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build and publish application
-        run: npx electron-builder --publish always
+      - name: Build Electron app
+        run: npx electron-builder --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: List dist folder
+        shell: bash
+        run: ls -la dist/ || echo 'No dist folder'
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.asset_path }}
+          if-no-files-found: warn
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: Chess-Book-Library-Setup.exe
+          path: artifacts/windows
+        continue-on-error: true
+
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: Chess-Book-Library.dmg
+          path: artifacts/macos
+        continue-on-error: true
+
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: Chess-Book-Library.AppImage
+          path: artifacts/linux
+        continue-on-error: true
+
+      - name: List downloaded artifacts
+        run: find artifacts/ -type f || echo 'No artifacts'
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+          fail_on_unmatched_files: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
