@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { autoUpdater } = require('electron-updater');
 
 const DATA_DIR = path.join(app.getPath('userData'), 'chess-library-data');
 const BOOKS_DIR = path.join(DATA_DIR, 'books');
@@ -25,8 +26,56 @@ function saveLibrary(library) {
   fs.writeFileSync(LIBRARY_FILE, JSON.stringify(library, null, 2), 'utf-8');
 }
 
-let mainWindow;
+// ── Auto-Updater ──────────────────────────────────────────────────────────────
+function setupAutoUpdater(win) {
+  // Configure logger so update events show in dev tools
+  autoUpdater.logger = require('electron').nativeTheme ? console : console;
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
 
+  // Notify renderer when an update is available
+  autoUpdater.on('update-available', (info) => {
+    win.webContents.send('update:available', info);
+  });
+
+  // Notify renderer when no update is found
+  autoUpdater.on('update-not-available', (info) => {
+    win.webContents.send('update:not-available', info);
+  });
+
+  // Forward download progress to renderer
+  autoUpdater.on('download-progress', (progress) => {
+    win.webContents.send('update:progress', progress);
+  });
+
+  // When update is fully downloaded, notify and prompt user
+  autoUpdater.on('update-downloaded', (info) => {
+    win.webContents.send('update:downloaded', info);
+    // Show native dialog to install now or later
+    dialog.showMessageBox(win, {
+      type: 'info',
+      title: 'Update Ready',
+      message: `Chess Book Library v${info.version} has been downloaded.`,
+      detail: 'The update will be installed when you restart the app. Restart now?',
+      buttons: ['Restart Now', 'Later'],
+      defaultId: 0,
+      cancelId: 1
+    }).then(({ response }) => {
+      if (response === 0) autoUpdater.quitAndInstall();
+    });
+  });
+
+  autoUpdater.on('error', (err) => {
+    win.webContents.send('update:error', err.message);
+    console.error('AutoUpdater error:', err);
+  });
+
+  // Check for updates on startup (silently)
+  autoUpdater.checkForUpdatesAndNotify();
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+let mainWindow;
 function createWindow() {
   ensureDirs();
   mainWindow = new BrowserWindow({
@@ -43,9 +92,28 @@ function createWindow() {
     show: false
   });
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
-  mainWindow.once('ready-to-show', () => mainWindow.show());
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
+    // Start auto-updater only in packaged app (not during dev)
+    if (app.isPackaged) {
+      setupAutoUpdater(mainWindow);
+    }
+  });
   mainWindow.on('closed', () => { mainWindow = null; });
 }
+
+// IPC: manually trigger update check from renderer
+ipcMain.handle('updater:check', async () => {
+  if (app.isPackaged) {
+    return autoUpdater.checkForUpdates();
+  }
+  return { message: 'Auto-update only available in packaged app' };
+});
+
+// IPC: install update and restart
+ipcMain.handle('updater:install', async () => {
+  autoUpdater.quitAndInstall();
+});
 
 // IPC: load library
 ipcMain.handle('library:load', async () => loadLibrary());
@@ -89,7 +157,6 @@ ipcMain.handle('pdf:chooseBulk', async () => {
   });
   if (canceled || !filePaths.length) return [];
   ensureDirs();
-
   const results = [];
   for (const src of filePaths) {
     const bookId = Date.now() + '-' + Math.random().toString(36).slice(2, 9);
