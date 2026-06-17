@@ -36,15 +36,21 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Configure npm for reliability
+        run: npm config set fetch-retry-mintimeout 20000 && npm config set fetch-retry-maxtimeout 120000 && npm config set fetch-retries 5
+        shell: bash
+
       - name: Install dependencies
         run: npm install
         env:
-          npm_config_cache: ${{ runner.temp }}/npm-cache
+          ELECTRON_MIRROR: https://npmmirror.com/mirrors/electron/
+          npm_config_prefer_offline: 'false'
 
       - name: Build Electron app
         run: npx electron-builder --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ELECTRON_MIRROR: https://npmmirror.com/mirrors/electron/
 
       - name: List dist folder
         shell: bash
