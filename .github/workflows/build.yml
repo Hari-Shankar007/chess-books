@@ -35,9 +35,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'npm'
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install dependencies (with retry)
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          command: npm ci
 
       - name: Build Electron app
         run: npx electron-builder --publish never
